@@ -16,14 +16,6 @@ import (
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
 )
 
-// EXAMPLES:
-// dotfiles init git@bitbucket.org:andoco/dotfiles-core.git
-// dotfiles pull
-// dotfiles add dotfiles-core newfile.conf
-// dotfiles push
-// dotfiles add dotfiles-core wrongfile.conf
-// dotfiles undo
-
 var (
 	dotfilesBasedir = "./dotfiles"
 	dotfilesWorkdir = "./workdir"
@@ -79,57 +71,6 @@ func main() {
 	}
 
 	os.Exit(0)
-
-	/*
-		// setup transport.AuthMethod
-		sshAuth, err := ssh.NewSSHAgentAuth("git")
-		if err != nil {
-			panic(err)
-		}
-
-		// clone bare dotfiles-core
-		bareRepo, err := git.PlainClone("./dotfiles/dotfiles-core.git", true, &git.CloneOptions{
-			URL:      "git@bitbucket.org:andoco/dotfiles-core.git",
-			Progress: os.Stdout,
-			Auth:     sshAuth,
-		})
-		if err != nil {
-			panic(err)
-		}
-
-		// get work tree
-		localFs := osfs.New("./worktree")
-		localRepo, err := git.Open(bareRepo.Storer, localFs)
-		if err != nil {
-			panic(err)
-		}
-
-		wt, err := localRepo.Worktree()
-		if err != nil {
-			panic(err)
-		}
-
-		// checkout dotfiles-core master
-		if err := wt.Checkout(&git.CheckoutOptions{}); err != nil {
-			panic(err)
-		}
-
-		// modify file
-		// TODO
-
-		// show status
-		status, err := wt.Status()
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println(status)
-
-		// commit to dotfiles-core master
-		// TODO
-
-		// push to origin
-		// TODO
-	*/
 }
 
 func executeInit(repoUrl string) (err error) {
