@@ -45,7 +45,7 @@ var (
 	listVerbose = list.Flag("verbose", "List all repo information").Bool()
 
 	status     = app.Command("status", "Show the status of files for the dotfile repo.")
-	statusRepo = status.Arg("repo-name", "Name of dotfile repo to show status for.").Required().String()
+	statusRepo = status.Arg("repo-name", "Name of dotfile repo to show status for.").String()
 )
 
 func main() {
@@ -122,22 +122,51 @@ func executeInit(repoUrl string) (err error) {
 }
 
 func executeStatus(repoName string) (err error) {
-	workingRepo, err := openWorkingRepo(repoName)
-	if err != nil {
-		return
+	repoNames := []string{}
+	if repoName == "" {
+		files, err := ioutil.ReadDir(dotfilesBasedir)
+		if err != nil {
+			return err
+		}
+
+		for _, f := range files {
+			name := strings.TrimSuffix(f.Name(), ".git")
+			repoNames = append(repoNames, name)
+		}
+	} else {
+		repoNames = append(repoNames, repoName)
 	}
 
-	wt, err := workingRepo.Worktree()
-	if err != nil {
-		return
-	}
+	for _, repoName := range repoNames {
+		fmt.Printf("%s:\n", repoName)
 
-	// show status
-	status, err := wt.Status()
-	if err != nil {
-		panic(err)
+		workingRepo, err := openWorkingRepo(repoName)
+		if err != nil {
+			return err
+		}
+
+		wt, err := workingRepo.Worktree()
+		if err != nil {
+			return err
+		}
+
+		// show status
+		status, err := wt.Status()
+		if err != nil {
+			return err
+		}
+
+		for f, s := range status {
+			switch s.Worktree {
+			case git.Modified:
+				fallthrough
+			case git.Added:
+				fallthrough
+			case git.Deleted:
+				fmt.Printf("[%c] %s\n", s.Worktree, f)
+			}
+		}
 	}
-	fmt.Println(status)
 
 	return
 }
@@ -285,7 +314,6 @@ func baseName(repoUrl string) (base string, err error) {
 
 func openWorkingRepo(repoName string) (workingRepo *git.Repository, err error) {
 	repoPath := filepath.Join(dotfilesBasedir, fmt.Sprintf("%s.git", repoName))
-	fmt.Printf("repopath = %s\n", repoPath)
 	repoStorer, err := filesystem.NewStorage(osfs.New(repoPath))
 	if err != nil {
 		return
