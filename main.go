@@ -10,6 +10,7 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 	"gopkg.in/src-d/go-billy.v2/osfs"
 	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/ssh"
 	"gopkg.in/src-d/go-git.v4/storage/filesystem"
@@ -41,8 +42,9 @@ var (
 	addRepo = add.Arg("repo-name", "Name of dotfile repo to stage to.").Required().String()
 	addFile = add.Arg("file", "Path of a file to add to the dotfile repo.").Required().ExistingFile()
 
-	push     = app.Command("push", "Push staged changes to the remote dotfile repo.")
-	pushRepo = push.Arg("repo-name", "Name of dotfile repo to push changes to.").Required().String()
+	save     = app.Command("save", "Save all staged changes by committing and pushing to the remote dotfile repo.")
+	saveRepo = save.Arg("repo-name", "Name of dotfile repo to save changes for.").Required().String()
+	saveMsg  = save.Arg("msg", "Message describing the changes to the files.").Required().String()
 
 	undo     = app.Command("undo", "Undo staged changes for a dotfile repo.")
 	undoRepo = undo.Arg("repo-name", "Name of dotfile repo to undo changes for.").Required().String()
@@ -65,6 +67,10 @@ func main() {
 		cmdErr = executeStatus(*statusRepo)
 	case add.FullCommand():
 		cmdErr = executeAdd(*addRepo, *addFile)
+	case save.FullCommand():
+		cmdErr = executeSave(*saveRepo, *saveMsg)
+	case pull.FullCommand():
+		cmdErr = executePull(*pullRepo)
 	}
 
 	if cmdErr != nil {
@@ -166,7 +172,7 @@ func executeInit(repoUrl string) (err error) {
 	}
 
 	// checkout dotfiles-core master
-	err = wt.Checkout(&git.CheckoutOptions{})
+	err = wt.Checkout(&git.CheckoutOptions{Force: true})
 	if err != nil {
 		return
 	}
@@ -241,12 +247,94 @@ func executeList(verbose bool) (err error) {
 	return
 }
 
+func executePull(repoName string) (err error) {
+	workingRepo, err := openWorkingRepo(repoName)
+	if err != nil {
+		return
+	}
+
+	auth, err := auth()
+	if err != nil {
+		return
+	}
+
+	err = workingRepo.Pull(&git.PullOptions{
+		Auth: auth,
+		//RemoteName:    "origin",
+		//ReferenceName: "master",
+		//Progress: os.Stdout,
+	})
+	if err != nil {
+		return
+
+	}
+
+	return
+}
+
+func executeSave(repoName string, msg string) (err error) {
+	workingRepo, err := openWorkingRepo(repoName)
+	if err != nil {
+		return
+	}
+
+	wt, err := workingRepo.Worktree()
+	if err != nil {
+		return
+	}
+
+	author, err := getAuthor()
+	if err != nil {
+		return
+	}
+
+	// commit changed or staged files
+	_, err = wt.Commit(msg, &git.CommitOptions{
+		All:    true,
+		Author: &author,
+	})
+	if err != nil {
+		return
+	}
+
+	auth, err := auth()
+	if err != nil {
+		return
+	}
+
+	err = workingRepo.Push(&git.PushOptions{
+		//RemoteName: "origin",
+		/*RefSpecs: []config.RefSpec{
+			"master",
+		},*/
+		Auth: auth,
+	})
+	if err != nil {
+		return
+	}
+
+	return
+}
+
 func auth() (transport.AuthMethod, error) {
 	sshAuth, err := ssh.NewSSHAgentAuth("git")
 	if err != nil {
 		return nil, err
 	}
 	return sshAuth, nil
+}
+
+func getAuthor() (sig object.Signature, err error) {
+	sig = object.Signature{
+		Name:  os.Getenv("GIT_AUTHOR_NAME"),
+		Email: os.Getenv("GIT_AUTHOR_EMAIL"),
+	}
+
+	if sig.Name == "" || sig.Email == "" {
+		err = fmt.Errorf("GIT_AUTHOR_NAME and GIT_AUTHOR_EMAIL envionment variables must exist.")
+	}
+
+	return
 }
 
 func baseName(repoUrl string) (base string, err error) {
