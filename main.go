@@ -30,11 +30,11 @@ var (
 	pull     = app.Command("pull", "Pull changes from the remote dotfile repo.")
 	pullRepo = pull.Arg("repo-name", "Name of dotfile repo to pull from.").Required().String()
 
-	add     = app.Command("add", "Add a new or updated file to the repo staging index.")
+	add     = app.Command("add", "Add a file to the repo staging index.")
 	addRepo = add.Arg("repo-name", "Name of dotfile repo to stage to.").Required().String()
 	addFile = add.Arg("file", "Path of a file to add to the dotfile repo.").Required().ExistingFile()
 
-	save     = app.Command("save", "Save all staged changes by committing and pushing to the remote dotfile repo.")
+	save     = app.Command("save", "Save all modified and added files by committing and pushing to the remote dotfile repo.")
 	saveRepo = save.Arg("repo-name", "Name of dotfile repo to save changes for.").Required().String()
 	saveMsg  = save.Arg("msg", "Message describing the changes to the files.").Required().String()
 
