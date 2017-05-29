@@ -143,7 +143,7 @@ func executeInit(repoUrl string) (err error) {
 	basePath := filepath.Join(dotfilesBasedir, baseName)
 	fmt.Printf("Repo basepath = %s\n", basePath)
 
-	auth, err := auth()
+	auth, err := getAuthMethod()
 	if err != nil {
 		return
 	}
@@ -253,7 +253,7 @@ func executePull(repoName string) (err error) {
 		return
 	}
 
-	auth, err := auth()
+	auth, err := getAuthMethod()
 	if err != nil {
 		return
 	}
@@ -297,7 +297,7 @@ func executeSave(repoName string, msg string) (err error) {
 		return
 	}
 
-	auth, err := auth()
+	auth, err := getAuthMethod()
 	if err != nil {
 		return
 	}
@@ -316,7 +316,7 @@ func executeSave(repoName string, msg string) (err error) {
 	return
 }
 
-func auth() (transport.AuthMethod, error) {
+func getAuthMethod() (transport.AuthMethod, error) {
 	sshAuth, err := ssh.NewSSHAgentAuth("git")
 	if err != nil {
 		return nil, err
